@@ -1,21 +1,50 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'maven:3.8.6-jdk-11' // Image Docker avec Maven et JDK 11
+            args '-v $HOME/.m2:/root/.m2' // Persiste le cache Maven entre les builds
+        }
+    }
+
+    environment {
+        GITHUB_REPO = 'https://github.com/Tristan559455/demo-jenkins-pipeline-T.git'
+    }
 
     stages {
+        // 1. Cloner le dépôt GitHub
+        stage('Clone') {
+            steps {
+                git url: "${GITHUB_REPO}",
+                branch: 'main' // Remplace par ta branche si nécessaire
+            }
+        }
+
+        // 2. Compiler le code et installer les dépendances
         stage('Build') {
             steps {
-                echo 'Building..'
+                sh 'mvn clean install'
             }
         }
+
+        // 3. Exécuter les tests
         stage('Test') {
             steps {
-                echo 'Testing..'
+                sh 'mvn test'
             }
         }
-        stage('Deploy') {
-            steps {
-                echo 'Deploying....'
-            }
+    }
+
+    // 4. Publier les résultats de tests (format JUnit)
+    post {
+        always {
+            junit '**/target/surefire-reports/**/*.xml' // Chemin standard pour les rapports Maven
+        }
+        success {
+            echo 'Pipeline réussi !'
+        }
+        failure {
+            echo 'Pipeline échoué.'
+            // Optionnel : Ajouter une notification (mail, Slack, etc.)
         }
     }
 }
